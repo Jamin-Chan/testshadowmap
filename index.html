@@ -51,6 +51,15 @@
                     <select id="selectSceneNodeSelect" disabled></select>
                 </div>
             </div>
+            <div id="fireworksEditor">
+                <div class="setting-item-container">
+                <label>Launch Time: <input type="number" id="launch-time" value="0" step="0.1" /></label><br>
+                <label>Color: <input type="color" id="firework-color" value="#65FE08" /></label><br>
+                <label>Size: <input type="number" id="firework-size" min="1" max="10" value="5" /></label><br>
+                <button id="addFirework">Add Rocket</button>
+                <button id="launchFireworks">Launch Fireworks</button>
+                </div>
+            </div>
         </div>
 
         <div id="canvas-container">

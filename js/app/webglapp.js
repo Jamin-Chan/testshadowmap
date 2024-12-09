@@ -9,7 +9,10 @@ import * as quat from '../lib/glmatrix/quat.js'
 
 import { OBJLoader } from '../../assignment3.objloader.js'
 import { Scene, SceneNode } from './scene.js'
-
+import Shader from '../utils/shader.js'
+import {Triangle} from './assignment0.js'
+import Firework from '../Firework.js'
+import Particle from '../Particles.js'
 /**
  * @Class
  * WebGlApp that will call basic GL functions, manage a list of shapes, and take care of rendering them
@@ -27,6 +30,7 @@ class WebGlApp
      */
     constructor( gl, shaders, app_state )
     {
+
         // Set GL flags
         this.setGlFlags( gl )
         this.shadowMap = this.createShadowMap(gl, 1024, 1024);
@@ -56,6 +60,13 @@ class WebGlApp
             return this.scene
         })
 
+        this.triangle_shader = new Shader( gl, '../../shaders/rocket.vert.glsl', '../../shaders/rocket.frag.glsl' );
+        this.triangle = new Triangle(gl, this.triangle_shader, [410,206], hex2rgb('#FFBF00'), 88  )
+        this.fireworkIsPlaceable = false;
+        this.gl = gl;
+        this.firework_shader = new Shader( gl, '../../shaders/firework.vert.glsl', '../../shaders/firework.frag.glsl' );
+        this.fireworksBuffer = gl.createBuffer();
+
         // Create the view matrix
         this.eye     =   [2.0, 0.5, -2.0]
         this.center  =   [0, 0, 0]
@@ -82,9 +93,40 @@ class WebGlApp
             shader.setUniform4x4f('u_p', this.projection)
             shader.unuse()
         }
+        this.startTime = performance.now();
+        this.fireworks = [];
+        this.numParticlesPerFirework = 200;
+
+        document.getElementById('addFirework').addEventListener('click', () => {
+            this.fireworkIsPlaceable = true;
+        });
+        document.getElementById('launchFireworks').addEventListener('click', () => {
+            for(let i = 0;i<this.fireworks.length;i++)
+            {
+                if(this.fireworks[i].active == false)
+                {
+                    this.fireworks[i].startTime = performance.now()/1000;
+                    this.fireworks[i].active = true;
+                }
+            }
+        });
+        this.canvas = canvas;
+        this.initial_width = canvas.width;
+        this.initial_height = canvas.height; 
 
     }
 
+    launchFirework(firework) {
+        firework.hasLaunched = true;
+         let particles = [];
+         for (let i = 0; i < this.numParticlesPerFirework; i++) {
+             let particleAngle = Math.random() * Math.PI*2;
+             let particleSpeed = Math.random() * 0.05 + 0.01;
+             particles.push(new Particle(firework.centerX,firework.centerY,Math.cos(particleAngle) * particleSpeed,Math.sin(particleAngle) * particleSpeed,Math.random() * 0.5 + 1,0,-0.05)); 
+         }
+         firework.particlesArray = particles;
+         firework.startTime = performance.now() / 1000;
+     }
 
     createShadowMap(gl, width, height) {
         const depthTexture = gl.createTexture();
@@ -170,6 +212,17 @@ class WebGlApp
      */
     update( gl, app_state, delta_time ) 
     {
+        if (this.fireworkIsPlaceable && Input.isMouseDown( 0 )) {
+            let fireworkLaunchTime = parseFloat(document.getElementById('launch-time').value);
+            let fireworkColor = document.getElementById('firework-color').value;
+            let fireworkSize = parseFloat(document.getElementById('firework-size').value);
+            this.fireworks.push(new Firework( fireworkLaunchTime, fireworkColor, fireworkSize, false, 0,null,this.firework_shader,this.gl,false,0,0,Input.mousex,Input.mousey));     
+            this.fireworkIsPlaceable = false;
+            let x2 = Input.mousex/this.canvas.width*2.0 - 1.0;
+            this.fireworks[this.fireworks.length - 1].centerX = x2;
+            this.fireworks[this.fireworks.length - 1].centerY = 1.0-(Input.mousey)/this.canvas.height*2.0;
+        }   
+
         // Shader
         if (this.scene != null) {
             let old_active_shader = this.active_shader
@@ -446,6 +499,32 @@ class WebGlApp
             console.log("render scene"); 
             this.scene.render( gl )
         }
+
+        //render fireworks
+        this.fireworks.forEach(firework => {
+            if (!firework.hasLaunched && (performance.now()/1000 - firework.startTime) >= firework.launchTime&&firework.active) {
+                this.launchFirework(firework);
+            }
+            if(!firework.hasLaunched)
+            {
+                (new Triangle(gl, this.triangle_shader, [firework.rocketX,firework.rocketY], hex2rgb('#FFBF00'), 44 )).render(gl);
+            }
+            if (firework.particlesArray && firework.active) {
+                const particleData = [];
+                firework.particlesArray.forEach(particle => {
+                    particle.updateLifeSpan(performance.now()/1000-firework.startTime)
+                    if (!particle.isDead()) { 
+                        particle.update();
+                        particleData.push(particle.x, particle.y);
+                    }
+                });
+                firework.particlesArray = firework.particlesArray.filter(particle => !particle.isDead()); 
+                if (particleData.length > 0) {
+                    firework.renderFirework();         
+                }
+            }
+        });   
+
     }
 
 }

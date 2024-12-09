@@ -87,6 +87,11 @@ class Shader
         this.gl.uniformMatrix4fv( this.getUniformLocation( name ), false, value )
     }
 
+    setAttribute1f( name, value)
+    {
+        this.gl.vertexAttrib1f( this.getAttributeLocation( name ), value )
+    }
+
     setArrayBuffer( name, buffer, num_components, stride = 0, offset = 0 )
     {
         const location = this.getAttributeLocation( name )
