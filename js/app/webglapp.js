@@ -105,8 +105,9 @@ class WebGlApp
 
     renderShadowMap(gl, shadowShader, scene, lightViewProjectionMatrix) {
         // Bind the shadow framebuffer
+        console.log(this.shadowMap.shadowFramebuffer)
         gl.bindFramebuffer(gl.FRAMEBUFFER, this.shadowMap.shadowFramebuffer);
-        gl.viewport(0, 0, 1024, 1024);
+        //gl.viewport(0, 0, canvas_width, canvas_height );
         gl.clear(gl.DEPTH_BUFFER_BIT);
     
         // Use the shadow shader program
@@ -386,16 +387,18 @@ class WebGlApp
         }
     }
 
+    
     calculateLightViewProjectionMatrix() {
-        console.log("ching chong wing wong")
-        const lightPosition = [0, 10, 10]; // Light position
-        const lightTarget = [0, 0, 0];     // Light looks at the origin
-        const upVector = [0, 1, 0];        // Up vector for the light's camera
+        //console.log(this.lights)
+        const lightPosition = [1, 1, 1];    // Light position HARD CODED WILL CHANGE SOON
+        const lightTarget = this.center;     // Light looks at the origin
+        const upVector = this.up;        // Up vector for the light's camera
     
         const lightViewMatrix = mat4.lookAt(mat4.create(), lightPosition, lightTarget, upVector);
-        const lightProjectionMatrix = mat4.ortho(mat4.create(), -10, 10, -10, 10, 0.1, 100);
+        const lightProjectionMatrix = mat4.ortho(mat4.create(), -20, 20, -20, 20, 0.1, 50);
+        const lightVPMatrix = mat4.multiply(mat4.create(), lightProjectionMatrix, lightViewMatrix);
     
-        return mat4.multiply(mat4.create(), lightProjectionMatrix, lightViewMatrix);
+        return lightVPMatrix;
     }
 
     /**
@@ -411,29 +414,38 @@ class WebGlApp
         // Render shadow map first
         //const lightViewProjectionMatrix = this.calculateLightViewProjectionMatrix(); // Implement this to compute the light matrix
         if (this.scene){
+            console.log("render shadowmap")
             const lightViewProjectionMatrix = this.scene.calculateLightViewProjectionMatrix(); 
-             this.renderShadowMap(gl, this.shaders.shadowShader, this.scene, lightViewProjectionMatrix);
-             this.shaders.shadowShader.use();
-             gl.activeTexture(gl.TEXTURE0);
-             gl.bindTexture(gl.TEXTURE_2D, this.shadowMap.depthTexture);
-             this.shaders.shadowShader.setUniform1i('u_shadowMap', 1000);
-             console.log(lightViewProjectionMatrix)
-             this.shaders.shadowShader.setUniform4x4f('u_lightVP', lightViewProjectionMatrix);
+            this.renderShadowMap(gl, this.shaders.shadowShader, this.scene, lightViewProjectionMatrix);
+            //this.shaders.shadowShader.use();
+
+            gl.activeTexture(gl.TEXTURE0);
+            gl.bindTexture(gl.TEXTURE_2D, this.shadowMap.depthTexture);
+
+            for (let shader of this.shaders) {
+                shader.use();
+                shader.setUniform1i('u_shadowMap', 0);
+                shader.setUniform4x4f('u_lightVP', lightViewProjectionMatrix);
+                shader.unuse();
+            }
         }
 
+        //console.log(this.shaders.shadowShader)
         // Set viewport and clear canvas
         this.setViewport( gl, canvas_width, canvas_height )
         this.clearCanvas( gl )
-        
-        //console.log(this.shaders.shadowShader)
 
         // Render the box
         // This will use the MVP that was passed to the shader
         this.box.render( gl )
 
-        // Render the scene
-        if (this.scene) this.scene.render( gl )
+        
 
+        // Render the scene
+        if (this.scene) {
+            console.log("render scene"); 
+            this.scene.render( gl )
+        }
     }
 
 }

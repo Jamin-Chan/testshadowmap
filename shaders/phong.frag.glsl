@@ -72,13 +72,13 @@ float calculateShadow(vec4 shadowCoord, sampler2D shadowMap) {
     // Percentage-Closer Filtering (PCF) for soft shadows
     float shadow = 0.0;
     vec2 texelSize = 1.0 / vec2(textureSize(shadowMap, 0));
-    for(int x = -1; x <= 1; ++x) {
-        for(int y = -1; y <= 1; ++y) {
+    for(int x = -2; x <= 2; ++x) {
+        for(int y = -2; y <= 2; ++y) {
             float pcfDepth = texture(shadowMap, projCoords.xy + vec2(x, y) * texelSize).r;
             shadow += currentDepth - bias > pcfDepth ? 0.0 : 1.0;
         }
     }
-    shadow /= 9.0;
+    shadow /= 25.0;
 
     return shadow;
 }
@@ -146,7 +146,7 @@ void main() {
     vec3 light_contribution = vec3(0.0);
 
     // Calculate shadow based on light view projection
-    float shadowFactor = calculateShadow(o_shadow_coord, u_shadowMap);
+    //float shadowFactor = calculateShadow(o_shadow_coord, u_shadowMap);
 
     for(int i = 0; i < MAX_LIGHTS; i++) {
         light_contribution += shadeAmbientLight(u_material, u_lights_ambient[i]);
@@ -154,9 +154,16 @@ void main() {
         
         // Apply shadow factor to point light
         vec3 pointLightContribution = shadePointLight(u_material, u_lights_point[i], o_vertex_normal_world, u_eye, o_vertex_position_world, u_lightVP, u_shadowMap);
-        light_contribution += shadowFactor * pointLightContribution;
+        light_contribution += pointLightContribution;
     }
 
     o_fragColor = vec4(light_contribution, 1.0);
+
+    //bleow is to test shadows
+    vec3 projCoords = o_shadow_coord.xyz / o_shadow_coord.w;
+    projCoords = projCoords * 0.5 + 0.5;
+
+    float depth = texture(u_shadowMap, projCoords.xy).r;
+    //o_fragColor = vec4(vec3(depth), 1.0);
 
 }

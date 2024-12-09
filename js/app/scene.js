@@ -51,14 +51,15 @@ class Scene {
 
     calculateLightViewProjectionMatrix() {
         //console.log(this.lights)
-        const lightPosition = [0, 1, 1];    // Light position
+        const lightPosition = [1, 1, 1];    // Light position HARD CODED WILL CHANGE SOON
         const lightTarget = [0, 0, 0];     // Light looks at the origin
         const upVector = [0, 1, 0];        // Up vector for the light's camera
     
         const lightViewMatrix = mat4.lookAt(mat4.create(), lightPosition, lightTarget, upVector);
-        const lightProjectionMatrix = mat4.ortho(mat4.create(), -10, 10, -10, 10, 0.1, 100);
+        const lightProjectionMatrix = mat4.ortho(mat4.create(), -20, 20, -20, 20, 0.1, 50);
+        const lightVPMatrix = mat4.multiply(mat4.create(), lightProjectionMatrix, lightViewMatrix);
     
-        return mat4.multiply(mat4.create(), lightProjectionMatrix, lightViewMatrix);
+        return lightVPMatrix;
     }
 
     /**
@@ -268,6 +269,7 @@ class Scene {
      * @param {WebGL2RenderingContext} gl The webgl2 rendering context
      */
     render( gl ) {
+        console.log("rendering scene")
         this.scenegraph.render( gl )
     }
 }
